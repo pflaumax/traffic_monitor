@@ -1,5 +1,5 @@
-from pydantic import BaseModel
-from typing import Optional
+from datetime import datetime, timezone
+from pydantic import BaseModel, Field
 
 
 class TrafficEvent(BaseModel):
@@ -8,4 +8,5 @@ class TrafficEvent(BaseModel):
     path: str
     status_code: int
     response_time_ms: float
-    user_id: Optional[str] = None
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
+    user_id: str | None = None
