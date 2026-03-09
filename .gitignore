@@ -1,0 +1,15 @@
+# IDE
+.idea/
+
+# virtual environments
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.pyc
+
+# uv cache
+.uv/
+
+
