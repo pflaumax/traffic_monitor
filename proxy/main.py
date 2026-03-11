@@ -2,11 +2,12 @@ import time
 import httpx
 from fastapi import FastAPI, Request
 from fastapi.responses import Response
+
+from proxy.config import settings
 from shared.schemas import TrafficEvent
 
 app = FastAPI(title="API Traffic Monitor")
 
-UPSTREAM_BASE_URL = "https://httpbin.org"
 EXCLUDED_HEADERS = frozenset(("host", "content-length"))
 
 
@@ -24,15 +25,19 @@ async def proxy_handler(path: str, request: Request) -> Response:
     async with httpx.AsyncClient() as client:
         upstream_response = await client.request(
             method=request.method,
-            url=f"{UPSTREAM_BASE_URL}/{path}",
-            headers={k: v for k, v in request.headers.items() if k.lower() not in EXCLUDED_HEADERS},
+            url=f"{settings.upstream_base_url}/{path}",
+            headers={
+                k: v
+                for k, v in request.headers.items()
+                if k.lower() not in EXCLUDED_HEADERS
+            },
             content=body,
             params=dict(request.query_params),
         )
 
-
     event = TrafficEvent(
-        client_ip=request.headers.get("x-forwarded-for", request.client.host),
+        client_ip=request.headers.get("x-forwarded-for")
+        or (request.client.host if request.client else "unknown"),
         method=request.method,
         path=f"/{path}",
         status_code=upstream_response.status_code,
