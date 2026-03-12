@@ -12,4 +12,5 @@ __pycache__/
 # uv cache
 .uv/
 
-
+# environment variables
+.env
