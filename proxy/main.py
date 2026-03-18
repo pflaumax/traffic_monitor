@@ -1,14 +1,14 @@
 import time
+
 import httpx
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import Response
 
 from proxy.config import settings
+from proxy.constants import EXCLUDED_HEADERS
 from shared.schemas import TrafficEvent
 
 app = FastAPI(title="API Traffic Monitor")
-
-EXCLUDED_HEADERS = frozenset(("host", "content-length"))
 
 
 @app.get("/")
@@ -16,24 +16,31 @@ async def healthcheck() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@app.api_route("/proxy/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
+@app.api_route(
+    "/proxy/{path:path}",
+    methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+    include_in_schema=False,
+)
 async def proxy_handler(path: str, request: Request) -> Response:
     body = await request.body()
 
     start = time.perf_counter()
 
-    async with httpx.AsyncClient() as client:
-        upstream_response = await client.request(
-            method=request.method,
-            url=f"{settings.upstream_base_url}/{path}",
-            headers={
-                k: v
-                for k, v in request.headers.items()
-                if k.lower() not in EXCLUDED_HEADERS
-            },
-            content=body,
-            params=dict(request.query_params),
-        )
+    try:
+        async with httpx.AsyncClient() as client:
+            upstream_response = await client.request(
+                method=request.method,
+                url=f"{settings.upstream_base_url}/{path}",
+                headers={
+                    k: v
+                    for k, v in request.headers.items()
+                    if k.lower() not in EXCLUDED_HEADERS
+                },
+                content=body,
+                params=dict(request.query_params),
+            )
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=502, detail=f"Upstream unreachable: {e}")
 
     event = TrafficEvent(
         client_ip=request.headers.get("x-forwarded-for")
