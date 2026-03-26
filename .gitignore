@@ -36,3 +36,7 @@ htmlcov/
 # mypy / ruff / type checking
 .mypy_cache/
 .ruff_cache/
+
+# claude
+.claude/
+CLAUDE.md
