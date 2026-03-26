@@ -1,16 +1,42 @@
+# macOS
+.DS_Store
+**/.DS_Store
+
 # IDE
 .idea/
+.vscode/
+*.swp
 
 # virtual environments
 .venv/
 venv/
+env/
+ENV/
 
-# Python
+# env variables
+.env
+.env.*
+!.env.example
+!.env.template
+
+# python / bytecode
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+*.so
 
 # uv cache
 .uv/
 
-# environment variables
-.env
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# mypy / ruff / type checking
+.mypy_cache/
+.ruff_cache/
+
+# claude
+.claude/
+CLAUDE.md
