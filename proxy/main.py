@@ -8,7 +8,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import Response
 
 from proxy.config import settings
-from proxy.constants import EXCLUDED_HEADERS
+from proxy.constants import EXCLUDED_HEADERS, EXCLUDED_RESPONSE_HEADERS
 from proxy.kafka_producer import emit_event, start_producer, stop_producer
 from shared.schemas import TrafficEvent
 
@@ -77,7 +77,11 @@ async def proxy_handler(path: str, request: Request) -> Response:
     return Response(
         content=upstream_response.content,
         status_code=upstream_response.status_code,
-        headers=dict(upstream_response.headers),
+        headers={
+            k: v
+            for k, v in upstream_response.headers.items()
+            if k.lower() not in EXCLUDED_RESPONSE_HEADERS
+        },
     )
 
 
