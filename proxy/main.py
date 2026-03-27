@@ -1,4 +1,7 @@
+import asyncio
+import logging
 import time
+from contextlib import asynccontextmanager
 
 import httpx
 from fastapi import FastAPI, HTTPException, Request
@@ -6,12 +9,30 @@ from fastapi.responses import Response
 
 from proxy.config import settings
 from proxy.constants import EXCLUDED_HEADERS
+from proxy.kafka_producer import emit_event, start_producer, stop_producer
 from shared.schemas import TrafficEvent
 
-app = FastAPI(title="API Traffic Monitor")
+logger = logging.getLogger(__name__)
 
 
-@app.get("/")
+async def _emit_safe(app, event_dict: dict) -> None:
+    try:
+        await emit_event(app, event_dict)
+    except Exception as e:
+        logger.error("Failed to emit Kafka event: %s", e)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await start_producer(app)
+    yield
+    await stop_producer(app)
+
+
+app = FastAPI(title="API Traffic Monitor", lifespan=lifespan)
+
+
+@app.get("/health")
 async def healthcheck() -> dict[str, str]:
     return {"status": "ok"}
 
@@ -23,7 +44,6 @@ async def healthcheck() -> dict[str, str]:
 )
 async def proxy_handler(path: str, request: Request) -> Response:
     body = await request.body()
-
     start = time.perf_counter()
 
     try:
@@ -52,8 +72,7 @@ async def proxy_handler(path: str, request: Request) -> Response:
         user_id=request.headers.get("x-user-id"),
     )
 
-    # TODO: replace with kafka
-    print(event.model_dump(mode="json"))
+    asyncio.create_task(_emit_safe(request.app, event.model_dump(mode="json")))
 
     return Response(
         content=upstream_response.content,
