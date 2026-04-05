@@ -43,6 +43,8 @@ services:
       - "8000:8000"
     env_file:
       - .env
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     depends_on:
       kafka:
         condition: service_healthy
