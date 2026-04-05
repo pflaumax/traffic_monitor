@@ -4,8 +4,10 @@ version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.14"
 dependencies = [
+    "aiokafka>=0.13.0",
     "fastapi>=0.135.1",
     "httpx>=0.28.1",
+    "orjson>=3.11.7",
     "pydantic>=2.12.5",
     "pydantic-settings>=2.13.1",
     "uvicorn>=0.41.0",
