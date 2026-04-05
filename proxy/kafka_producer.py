@@ -4,10 +4,9 @@ import orjson
 from aiokafka import AIOKafkaProducer
 
 from proxy.config import settings
+from shared.topics import TOPIC_HTTP_TRAFFIC
 
 logger = logging.getLogger(__name__)
-
-TOPIC = "http.traffic"
 
 
 def get_producer(app) -> AIOKafkaProducer:
@@ -35,4 +34,4 @@ async def stop_producer(app) -> None:
 
 async def emit_event(app, event_dict: dict) -> None:
     producer = get_producer(app)
-    await producer.send(TOPIC, value=event_dict)
+    await producer.send(TOPIC_HTTP_TRAFFIC, value=event_dict)
