@@ -6,14 +6,29 @@ HTTP reverse proxy that forwards requests to an upstream API and emits traffic e
 
 ```
 Client → FastAPI Proxy → Upstream API (httpbin.org)
-                ↓
-            Kafka (http.traffic topic)
+                ↓                ↓
+            Kafka           Redis (metrics)
+        (http.traffic)      (stats:*)
 ```
 
 - `proxy/` — FastAPI app that proxies HTTP requests and emits traffic events
 - `shared/` — shared schemas and constants (Pydantic models, Kafka topics)
 - `consumer/` — Kafka consumer (planned)
 - `dashboard/` — analytics dashboard (planned)
+
+## Redis Metrics
+
+After each proxied request, the proxy atomically writes aggregated stats to Redis using a pipeline. The `/stats` endpoint reads them back in parallel via `asyncio.gather`. Tracked keys:
+
+| Key | Type | Description |
+|---|---|---|
+| `stats:total_requests` | string (int) | Total proxied requests |
+| `stats:status_codes` | hash | Count per HTTP status code |
+| `stats:methods` | hash | Count per HTTP method |
+| `stats:response_time_sum` / `stats:response_time_count` | string (float/int) | Running average response time |
+| `stats:top_paths` | sorted set | Most requested paths (top 10) |
+
+Stats writes are fire-and-forget — a Redis failure never affects the proxy response. If Redis is unreachable, `/stats` returns `503`.
 
 ## Quick Start
 
@@ -44,7 +59,7 @@ docker compose up
 |---|---|
 | `GET /health` | Health check |
 | `ANY /proxy/{path}` | Proxy to upstream (GET, POST, PUT, PATCH, DELETE) |
-| `GET /stats` | Stats skeleton (TODO) |
+| `GET /stats` | Aggregated traffic metrics from Redis |
 
 ## Fast Tests
 
@@ -66,6 +81,9 @@ curl -H "x-user-id: user123" http://localhost:8000/proxy/get
 curl -X POST http://localhost:8000/proxy/post \
   -H "Content-Type: application/json" \
   -d '{"hello": "world"}'
+
+# traffic stats
+curl http://localhost:8000/stats | jq
 ```
 
 ## Development
@@ -86,7 +104,7 @@ pytest
 
 ## Tech Stack
 
-- Python 3.14, FastAPI, httpx, aiokafka, Pydantic
+- Python 3.14, FastAPI, httpx, aiokafka, redis, Pydantic
 - Kafka (KRaft mode), Redis
 - uv for dependency management
 - ruff for linting/formatting
