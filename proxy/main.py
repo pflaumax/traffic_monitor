@@ -101,19 +101,26 @@ async def proxy_handler(path: str, request: Request) -> Response:
 async def get_stats(request: Request):
     redis = request.app.state.redis
     try:
-        total_raw, status_raw, methods_raw, time_sum_raw, time_count_raw, top_paths_raw = (
-            await asyncio.gather(
-                redis.get("stats:total_requests"),
-                redis.hgetall("stats:status_codes"),
-                redis.hgetall("stats:methods"),
-                redis.get("stats:response_time_sum"),
-                redis.get("stats:response_time_count"),
-                redis.zrevrange("stats:top_paths", 0, 9, withscores=True),
-            )
+        (
+            total_raw,
+            status_raw,
+            methods_raw,
+            time_sum_raw,
+            time_count_raw,
+            top_paths_raw,
+        ) = await asyncio.gather(
+            redis.get("stats:total_requests"),
+            redis.hgetall("stats:status_codes"),
+            redis.hgetall("stats:methods"),
+            redis.get("stats:response_time_sum"),
+            redis.get("stats:response_time_count"),
+            redis.zrevrange("stats:top_paths", 0, 9, withscores=True),
         )
     except Exception as e:
         logger.error("Redis unavailable: %s", e)
-        return JSONResponse(status_code=503, content={"detail": "Stats unavailable: Redis unreachable"})
+        return JSONResponse(
+            status_code=503, content={"detail": "Stats unavailable: Redis unreachable"}
+        )
 
     total = int(total_raw) if total_raw else 0
     time_sum = float(time_sum_raw) if time_sum_raw else 0.0
