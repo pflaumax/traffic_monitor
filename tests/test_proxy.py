@@ -48,7 +48,11 @@ async def client(mock_kafka, mock_redis):
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         ac.app = app
         app.state.redis = mock_redis
+        import httpx
+
+        app.state.http_client = httpx.AsyncClient()
         yield ac
+        await app.state.http_client.aclose()
 
 
 async def test_healthcheck(client):

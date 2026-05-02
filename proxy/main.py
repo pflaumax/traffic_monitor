@@ -34,7 +34,9 @@ async def _update_stats_safe(app, event_dict: dict) -> None:
 async def lifespan(app: FastAPI):
     await start_producer(app)
     await start_redis(app)
+    app.state.http_client = httpx.AsyncClient()
     yield
+    await app.state.http_client.aclose()
     await stop_producer(app)
     await stop_redis(app)
 
@@ -57,16 +59,13 @@ async def proxy_handler(path: str, request: Request) -> Response:
     start = time.perf_counter()
 
     try:
-        async with httpx.AsyncClient() as client:
-            upstream_response = await client.request(
-                method=request.method,
-                url=f"{settings.upstream_base_url}/{path}",
-                headers={
-                    k: v for k, v in request.headers.items() if k.lower() not in EXCLUDED_HEADERS
-                },
-                content=body,
-                params=str(request.query_params),
-            )
+        upstream_response = await request.app.state.http_client.request(
+            method=request.method,
+            url=f"{settings.upstream_base_url}/{path}",
+            headers={k: v for k, v in request.headers.items() if k.lower() not in EXCLUDED_HEADERS},
+            content=body,
+            params=str(request.query_params),
+        )
     except httpx.RequestError as e:
         raise HTTPException(status_code=502, detail=f"Upstream unreachable: {e}") from e
 

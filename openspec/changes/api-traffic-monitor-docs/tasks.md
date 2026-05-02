@@ -14,9 +14,9 @@
 
 ## 3. Connection Pooling (TASK-17 / BUG-02)
 
-- [ ] 3.1 Create `app.state.http_client` in the lifespan context manager in `proxy/main.py`
-- [ ] 3.2 Replace `async with httpx.AsyncClient() as client:` per-request pattern with `app.state.http_client`
-- [ ] 3.3 Verify all proxy tests still pass after refactor
+- [x] 3.1 Create `app.state.http_client` in the lifespan context manager in `proxy/main.py`
+- [x] 3.2 Replace `async with httpx.AsyncClient() as client:` per-request pattern with `app.state.http_client`
+- [x] 3.3 Verify all proxy tests still pass after refactor
 
 ## 4. Redis Rate Limiter (TASK-09)
 
