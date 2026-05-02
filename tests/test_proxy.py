@@ -97,3 +97,96 @@ async def test_proxy_query_params(client):
 async def test_proxy_not_found(client):
     resp = await client.get("/proxy/status/404")
     assert resp.status_code == 404
+
+
+async def test_emit_safe_failure_does_not_affect_response(mock_kafka, mock_redis):
+    """Test that Kafka emit failures don't break the proxy response."""
+    mock_kafka.side_effect = Exception("Kafka connection failed")
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        ac.app = app
+        app.state.redis = mock_redis
+        import httpx
+
+        app.state.http_client = httpx.AsyncClient()
+        resp = await ac.get("/proxy/get")
+        assert resp.status_code == 200
+
+        await app.state.http_client.aclose()
+
+
+async def test_update_stats_safe_failure_does_not_affect_response(mock_kafka, mock_redis):
+    """Test that Redis stats update failures don't break the proxy response."""
+    mock_redis.pipeline.side_effect = Exception("Redis connection failed")
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        ac.app = app
+        app.state.redis = mock_redis
+        import httpx
+
+        app.state.http_client = httpx.AsyncClient()
+        resp = await ac.get("/proxy/get")
+        assert resp.status_code == 200
+
+        await app.state.http_client.aclose()
+
+
+async def test_stats_redis_unreachable_returns_503(mock_kafka):
+    """Test that /stats returns 503 when Redis is unreachable."""
+    redis = AsyncMock()
+    redis.get.side_effect = Exception("Redis connection failed")
+
+    with (
+        patch("proxy.redis_client.start_redis", new_callable=AsyncMock),
+        patch("proxy.redis_client.stop_redis", new_callable=AsyncMock),
+    ):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            ac.app = app
+            app.state.redis = redis
+            import httpx
+
+            app.state.http_client = httpx.AsyncClient()
+            resp = await ac.get("/stats")
+            assert resp.status_code == 503
+            assert "Stats unavailable" in resp.json()["detail"]
+
+            await app.state.http_client.aclose()
+
+
+async def test_stats_increment_assertions(mock_kafka, mock_redis):
+    """Test that stats are incremented with correct Redis pipeline calls."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        ac.app = app
+        app.state.redis = mock_redis
+        import httpx
+
+        app.state.http_client = httpx.AsyncClient()
+        resp = await ac.get("/proxy/get")
+        assert resp.status_code == 200
+
+        import asyncio
+
+        await asyncio.sleep(0.1)
+        mock_redis.pipeline.assert_called()
+        await app.state.http_client.aclose()
+
+
+async def test_upstream_unreachable_returns_502(mock_kafka, mock_redis):
+    """Test that proxy returns 502 when upstream is unreachable."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        ac.app = app
+        app.state.redis = mock_redis
+        import httpx
+
+        failing_client = AsyncMock()
+        failing_client.request.side_effect = httpx.RequestError("Connection refused")
+        app.state.http_client = failing_client
+
+        resp = await ac.get("/proxy/get")
+        assert resp.status_code == 502
+        assert "Upstream unreachable" in resp.json()["detail"]

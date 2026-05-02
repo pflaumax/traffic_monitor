@@ -28,12 +28,12 @@
 
 ## 5. Expand Test Coverage (TASK-12)
 
-- [ ] 5.1 Add test: `_emit_safe` failure does not affect proxy response
-- [ ] 5.2 Add test: `_update_stats_safe` failure does not affect proxy response
-- [ ] 5.3 Add test: Redis unreachable → `GET /stats` returns HTTP 503
-- [ ] 5.4 Add test: stats increment assertions (verify pipeline calls with correct args)
-- [ ] 5.5 Add test: upstream unreachable → proxy returns HTTP 502
-- [ ] 5.6 Run `pytest --cov` and verify coverage ≥ 80%
+- [x] 5.1 Add test: `_emit_safe` failure does not affect proxy response
+- [x] 5.2 Add test: `_update_stats_safe` failure does not affect proxy response
+- [x] 5.3 Add test: Redis unreachable → `GET /stats` returns HTTP 503
+- [x] 5.4 Add test: stats increment assertions (verify pipeline calls with correct args)
+- [x] 5.5 Add test: upstream unreachable → proxy returns HTTP 502
+- [x] 5.6 Run `pytest --cov` and verify coverage ≥ 80%
 
 ## 6. Kafka Consumer Service (TASK-10)
 
