@@ -35,6 +35,13 @@
 - [x] 5.5 Add test: upstream unreachable → proxy returns HTTP 502
 - [x] 5.6 Run `pytest --cov` and verify coverage ≥ 80%
 
+## Documentation Updates
+
+- [x] Update README.md with rate limiting section
+- [x] Update README.md with HEAD/OPTIONS methods
+- [x] Update README.md with coverage information
+- [x] Update .env.example with RATE_LIMIT_PER_MINUTE
+
 ## 6. Kafka Consumer Service (TASK-10)
 
 - [ ] 6.1 Confirm DECISION-01 and DECISION-04 are resolved before starting
