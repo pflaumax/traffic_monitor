@@ -20,11 +20,11 @@
 
 ## 4. Redis Rate Limiter (TASK-09)
 
-- [ ] 4.1 Add `rate_limit_per_minute: int = 100` to `Settings` in `proxy/config.py`
-- [ ] 4.2 Create `proxy/rate_limiter.py` with sliding window counter using `INCR "rl:{client_ip}"` + `EXPIRE 60`
-- [ ] 4.3 Integrate rate limiter as middleware or FastAPI dependency in `proxy/main.py`
-- [ ] 4.4 Return HTTP 429 when client exceeds threshold
-- [ ] 4.5 Add unit tests for rate limiter (under limit, at limit, over limit)
+- [x] 4.1 Add `rate_limit_per_minute: int = 100` to `Settings` in `proxy/config.py`
+- [x] 4.2 Create `proxy/rate_limiter.py` with sliding window counter using `INCR "rl:{client_ip}"` + `EXPIRE 60`
+- [x] 4.3 Integrate rate limiter as middleware or FastAPI dependency in `proxy/main.py`
+- [x] 4.4 Return HTTP 429 when client exceeds threshold
+- [x] 4.5 Add unit tests for rate limiter (under limit, at limit, over limit)
 
 ## 5. Expand Test Coverage (TASK-12)
 

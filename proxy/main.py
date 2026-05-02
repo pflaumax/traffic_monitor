@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse, Response
 from proxy.config import settings
 from proxy.constants import EXCLUDED_HEADERS, EXCLUDED_RESPONSE_HEADERS
 from proxy.kafka_producer import emit_event, start_producer, stop_producer
+from proxy.rate_limiter import check_rate_limit
 from proxy.redis_client import start_redis, stop_redis, update_stats
 from shared.schemas import PathCount, StatsResponse, TrafficEvent
 
@@ -55,6 +56,15 @@ async def healthcheck() -> dict[str, str]:
     include_in_schema=False,
 )
 async def proxy_handler(path: str, request: Request) -> Response:
+    client_ip = request.headers.get("x-forwarded-for") or (
+        request.client.host if request.client else "unknown"
+    )
+    allowed = await check_rate_limit(
+        request.app.state.redis, client_ip, settings.rate_limit_per_minute
+    )
+    if not allowed:
+        raise HTTPException(status_code=429, detail="Rate limit exceeded. Please try again later.")
+
     body = await request.body()
     start = time.perf_counter()
 

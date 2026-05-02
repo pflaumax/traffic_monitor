@@ -5,6 +5,7 @@ class Settings(BaseSettings):
     upstream_base_url: str = "https://httpbin.org"
     kafka_bootstrap_servers: str = "kafka:9092"
     redis_url: str = "redis://redis:6379"
+    rate_limit_per_minute: int = 100
 
     model_config = SettingsConfigDict(
         env_file=".env",
