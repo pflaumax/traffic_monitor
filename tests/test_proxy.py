@@ -6,9 +6,12 @@ from httpx import ASGITransport, AsyncClient
 from proxy.main import app
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def mock_kafka():
-    """Mock Kafka producer so tests don't need a running broker."""
+    """Mock Kafka producer so tests don't need a running broker.
+
+    Module-scoped since Kafka mock is stateless and can be safely reused.
+    """
     with (
         patch("proxy.kafka_producer.start_producer", new_callable=AsyncMock),
         patch("proxy.kafka_producer.stop_producer", new_callable=AsyncMock),

@@ -1,7 +1,7 @@
 [project]
 name = "traffic-monitor"
 version = "0.1.0"
-description = "Add your description here"
+description = "HTTP reverse proxy that forwards requests to an upstream API and emits traffic events to Kafka for monitoring and analytics"
 requires-python = ">=3.14"
 dependencies = [
     "aiokafka>=0.13.0",
@@ -35,3 +35,5 @@ packages = ["proxy", "shared"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]

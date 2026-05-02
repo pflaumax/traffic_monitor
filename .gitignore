@@ -40,3 +40,7 @@ htmlcov/
 # claude
 .claude/
 CLAUDE.md
+.github
+.kilocode
+.kiro
+/docs

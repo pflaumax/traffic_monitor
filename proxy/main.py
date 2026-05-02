@@ -11,7 +11,7 @@ from proxy.config import settings
 from proxy.constants import EXCLUDED_HEADERS, EXCLUDED_RESPONSE_HEADERS
 from proxy.kafka_producer import emit_event, start_producer, stop_producer
 from proxy.redis_client import start_redis, stop_redis, update_stats
-from shared.schemas import TrafficEvent
+from shared.schemas import PathCount, StatsResponse, TrafficEvent
 
 logger = logging.getLogger(__name__)
 
@@ -97,8 +97,8 @@ async def proxy_handler(path: str, request: Request) -> Response:
     )
 
 
-@app.get("/stats")
-async def get_stats(request: Request):
+@app.get("/stats", response_model=StatsResponse)
+async def get_stats(request: Request) -> StatsResponse:
     redis = request.app.state.redis
     try:
         (
@@ -126,13 +126,13 @@ async def get_stats(request: Request):
     time_sum = float(time_sum_raw) if time_sum_raw else 0.0
     time_count = int(time_count_raw) if time_count_raw else 0
 
-    return {
-        "total_requests": total,
-        "status_codes": {k.decode(): int(v) for k, v in status_raw.items()},
-        "methods": {k.decode(): int(v) for k, v in methods_raw.items()},
-        "avg_response_time_ms": round(time_sum / time_count, 2) if time_count else 0.0,
-        "top_paths": [
-            {"path": path.decode(), "count": int(score)}
+    return StatsResponse(
+        total_requests=total,
+        status_codes={k.decode(): int(v) for k, v in status_raw.items()},
+        methods={k.decode(): int(v) for k, v in methods_raw.items()},
+        avg_response_time_ms=round(time_sum / time_count, 2) if time_count else 0.0,
+        top_paths=[
+            PathCount(path=path.decode(), count=int(score))
             for path, score in top_paths_raw
         ],
-    }
+    )
