@@ -49,7 +49,7 @@ async def healthcheck() -> dict[str, str]:
 
 @app.api_route(
     "/proxy/{path:path}",
-    methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+    methods=["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"],
     include_in_schema=False,
 )
 async def proxy_handler(path: str, request: Request) -> Response:
@@ -67,10 +67,10 @@ async def proxy_handler(path: str, request: Request) -> Response:
                     if k.lower() not in EXCLUDED_HEADERS
                 },
                 content=body,
-                params=dict(request.query_params),
+                params=str(request.query_params),
             )
     except httpx.RequestError as e:
-        raise HTTPException(status_code=502, detail=f"Upstream unreachable: {e}")
+        raise HTTPException(status_code=502, detail=f"Upstream unreachable: {e}") from e
 
     event = TrafficEvent(
         client_ip=request.headers.get("x-forwarded-for")
@@ -83,8 +83,13 @@ async def proxy_handler(path: str, request: Request) -> Response:
     )
     event_dict = event.model_dump(mode="json")
 
-    asyncio.create_task(_emit_safe(request.app, event_dict))
-    asyncio.create_task(_update_stats_safe(request.app, event_dict))
+    # Store task references to prevent premature garbage collection
+    emit_task = asyncio.create_task(_emit_safe(request.app, event_dict))
+    stats_task = asyncio.create_task(_update_stats_safe(request.app, event_dict))
+
+    # Add done callbacks to clean up task references
+    emit_task.add_done_callback(lambda t: None)
+    stats_task.add_done_callback(lambda t: None)
 
     return Response(
         content=upstream_response.content,

@@ -7,10 +7,10 @@
 
 ## 2. Bug Fixes (Quick Wins)
 
-- [ ] 2.1 BUG-03: Add `HEAD` and `OPTIONS` to the proxy `methods` list in `proxy/main.py`
-- [ ] 2.2 BUG-01: Fix duplicate query params — replace `params=dict(request.query_params)` with `params=str(request.query_params)` in `proxy/main.py`
-- [ ] 2.3 BUG-05: Store `asyncio.create_task` references in `proxy/main.py` to prevent premature garbage collection
-- [ ] 2.4 TASK-13: Add `[tool.ruff]` section to `pyproject.toml` with `line-length`, `target-version = "py314"`, and rule sets
+- [x] 2.1 BUG-03: Add `HEAD` and `OPTIONS` to the proxy `methods` list in `proxy/main.py`
+- [x] 2.2 BUG-01: Fix duplicate query params — replace `params=dict(request.query_params)` with `params=str(request.query_params)` in `proxy/main.py`
+- [x] 2.3 BUG-05: Store `asyncio.create_task` references in `proxy/main.py` to prevent premature garbage collection
+- [x] 2.4 TASK-13: Add `[tool.ruff]` section to `pyproject.toml` with `line-length`, `target-version = "py314"`, and rule sets
 
 ## 3. Connection Pooling (TASK-17 / BUG-02)
 
