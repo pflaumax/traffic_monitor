@@ -1,10 +1,11 @@
 [project]
 name = "traffic-monitor"
 version = "0.1.0"
-description = "Add your description here"
+description = "HTTP reverse proxy that forwards requests to an upstream API and emits traffic events to Kafka for monitoring and analytics"
 requires-python = ">=3.14"
 dependencies = [
     "aiokafka>=0.13.0",
+    "redis>=5.2.0",
     "fastapi>=0.135.1",
     "httpx>=0.28.1",
     "orjson>=3.11.7",
@@ -23,7 +24,16 @@ build-backend = "hatchling.build"
 [dependency-groups]
 dev = [
     "hatchling>=1.29.0",
+    "pytest>=8.0",
+    "pytest-asyncio>=0.25",
+    "httpx>=0.28.1",
+    "ruff>=0.11",
 ]
 
 [tool.hatch.build.targets.wheel]
 packages = ["proxy", "shared"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
