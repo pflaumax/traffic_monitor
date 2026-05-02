@@ -29,8 +29,8 @@ def mock_redis():
     redis.get = AsyncMock(side_effect=[b"10", b"500.0", b"10"])
     redis.hgetall = AsyncMock(side_effect=[{b"200": b"10"}, {b"GET": b"10"}])
     redis.zrevrange = AsyncMock(return_value=[(b"/get", 10.0)])
-    redis.incr = AsyncMock(return_value=1)
-    redis.expire = AsyncMock(return_value=True)
+    redis.incr = AsyncMock(side_effect=lambda key: 1)
+    redis.expire = AsyncMock(side_effect=lambda key, ttl: True)
     pipeline_cm = MagicMock()
     pipe = MagicMock()  # pipeline commands (incr, hincrby, etc.) are sync queuing calls
     pipe.execute = AsyncMock(return_value=[])
