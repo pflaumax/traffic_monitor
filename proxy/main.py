@@ -62,9 +62,7 @@ async def proxy_handler(path: str, request: Request) -> Response:
                 method=request.method,
                 url=f"{settings.upstream_base_url}/{path}",
                 headers={
-                    k: v
-                    for k, v in request.headers.items()
-                    if k.lower() not in EXCLUDED_HEADERS
+                    k: v for k, v in request.headers.items() if k.lower() not in EXCLUDED_HEADERS
                 },
                 content=body,
                 params=str(request.query_params),
@@ -137,7 +135,6 @@ async def get_stats(request: Request) -> StatsResponse:
         methods={k.decode(): int(v) for k, v in methods_raw.items()},
         avg_response_time_ms=round(time_sum / time_count, 2) if time_count else 0.0,
         top_paths=[
-            PathCount(path=path.decode(), count=int(score))
-            for path, score in top_paths_raw
+            PathCount(path=path.decode(), count=int(score)) for path, score in top_paths_raw
         ],
     )
