@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse, Response
 from proxy.config import settings
 from proxy.constants import EXCLUDED_HEADERS, EXCLUDED_RESPONSE_HEADERS
 from proxy.kafka_producer import emit_event, start_producer, stop_producer
+from proxy.rate_limiter import check_rate_limit
 from proxy.redis_client import start_redis, stop_redis, update_stats
 from shared.schemas import PathCount, StatsResponse, TrafficEvent
 
@@ -34,7 +35,9 @@ async def _update_stats_safe(app, event_dict: dict) -> None:
 async def lifespan(app: FastAPI):
     await start_producer(app)
     await start_redis(app)
+    app.state.http_client = httpx.AsyncClient()
     yield
+    await app.state.http_client.aclose()
     await stop_producer(app)
     await stop_redis(app)
 
@@ -49,28 +52,32 @@ async def healthcheck() -> dict[str, str]:
 
 @app.api_route(
     "/proxy/{path:path}",
-    methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+    methods=["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"],
     include_in_schema=False,
 )
 async def proxy_handler(path: str, request: Request) -> Response:
+    client_ip = request.headers.get("x-forwarded-for") or (
+        request.client.host if request.client else "unknown"
+    )
+    allowed = await check_rate_limit(
+        request.app.state.redis, client_ip, settings.rate_limit_per_minute
+    )
+    if not allowed:
+        raise HTTPException(status_code=429, detail="Rate limit exceeded. Please try again later.")
+
     body = await request.body()
     start = time.perf_counter()
 
     try:
-        async with httpx.AsyncClient() as client:
-            upstream_response = await client.request(
-                method=request.method,
-                url=f"{settings.upstream_base_url}/{path}",
-                headers={
-                    k: v
-                    for k, v in request.headers.items()
-                    if k.lower() not in EXCLUDED_HEADERS
-                },
-                content=body,
-                params=dict(request.query_params),
-            )
+        upstream_response = await request.app.state.http_client.request(
+            method=request.method,
+            url=f"{settings.upstream_base_url}/{path}",
+            headers={k: v for k, v in request.headers.items() if k.lower() not in EXCLUDED_HEADERS},
+            content=body,
+            params=str(request.query_params),
+        )
     except httpx.RequestError as e:
-        raise HTTPException(status_code=502, detail=f"Upstream unreachable: {e}")
+        raise HTTPException(status_code=502, detail=f"Upstream unreachable: {e}") from e
 
     event = TrafficEvent(
         client_ip=request.headers.get("x-forwarded-for")
@@ -83,8 +90,13 @@ async def proxy_handler(path: str, request: Request) -> Response:
     )
     event_dict = event.model_dump(mode="json")
 
-    asyncio.create_task(_emit_safe(request.app, event_dict))
-    asyncio.create_task(_update_stats_safe(request.app, event_dict))
+    # Store task references to prevent premature garbage collection
+    emit_task = asyncio.create_task(_emit_safe(request.app, event_dict))
+    stats_task = asyncio.create_task(_update_stats_safe(request.app, event_dict))
+
+    # Add done callbacks to clean up task references
+    emit_task.add_done_callback(lambda t: None)
+    stats_task.add_done_callback(lambda t: None)
 
     return Response(
         content=upstream_response.content,
@@ -132,7 +144,6 @@ async def get_stats(request: Request) -> StatsResponse:
         methods={k.decode(): int(v) for k, v in methods_raw.items()},
         avg_response_time_ms=round(time_sum / time_count, 2) if time_count else 0.0,
         top_paths=[
-            PathCount(path=path.decode(), count=int(score))
-            for path, score in top_paths_raw
+            PathCount(path=path.decode(), count=int(score)) for path, score in top_paths_raw
         ],
     )

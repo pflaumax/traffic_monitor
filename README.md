@@ -16,6 +16,18 @@ Client → FastAPI Proxy → Upstream API (httpbin.org)
 - `consumer/` — Kafka consumer (planned)
 - `dashboard/` — analytics dashboard (planned)
 
+## Rate Limiting
+
+The proxy includes a Redis-based sliding window rate limiter to prevent abuse:
+
+- **Default limit**: 100 requests per minute per IP
+- **Configurable** via `RATE_LIMIT_PER_MINUTE` environment variable
+- **Per-IP tracking** using `x-forwarded-for` header or client IP
+- **HTTP 429** response when limit exceeded
+- **Fail-open**: Allows requests if Redis is unavailable (graceful degradation)
+
+Rate limit keys: `rl:{client_ip}` (60-second TTL)
+
 ## Redis Metrics
 
 After each proxied request, the proxy atomically writes aggregated stats to Redis using a pipeline. The `/stats` endpoint reads them back in parallel via `asyncio.gather`. Tracked keys:
@@ -27,6 +39,7 @@ After each proxied request, the proxy atomically writes aggregated stats to Redi
 | `stats:methods` | hash | Count per HTTP method |
 | `stats:response_time_sum` / `stats:response_time_count` | string (float/int) | Running average response time |
 | `stats:top_paths` | sorted set | Most requested paths (top 10) |
+| `rl:{client_ip}` | string (int) | Rate limit counter per IP (60s TTL) |
 
 Stats writes are fire-and-forget — a Redis failure never affects the proxy response. If Redis is unreachable, `/stats` returns `503`.
 
@@ -58,7 +71,7 @@ docker compose up
 | Endpoint | Description |
 |---|---|
 | `GET /health` | Health check |
-| `ANY /proxy/{path}` | Proxy to upstream (GET, POST, PUT, PATCH, DELETE) |
+| `ANY /proxy/{path}` | Proxy to upstream (GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS) |
 | `GET /stats` | Aggregated traffic metrics from Redis |
 
 ## Fast Tests
@@ -84,6 +97,9 @@ curl -X POST http://localhost:8000/proxy/post \
 
 # traffic stats
 curl http://localhost:8000/stats | jq
+
+# test rate limiting (make 101+ requests quickly)
+for i in {1..105}; do curl -s http://localhost:8000/proxy/get > /dev/null && echo "Request $i: OK" || echo "Request $i: RATE LIMITED"; done
 ```
 
 ## Development
@@ -95,11 +111,15 @@ uv sync --all-groups
 # lint
 ruff check .
 
-# format check
-ruff format --check .
+# format
+ruff format .
 
 # run tests
 pytest
+
+# run tests with coverage
+pytest --cov=proxy --cov=shared tests/
+# Current coverage: 86%
 ```
 
 ## Tech Stack

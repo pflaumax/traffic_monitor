@@ -7,33 +7,40 @@
 
 ## 2. Bug Fixes (Quick Wins)
 
-- [ ] 2.1 BUG-03: Add `HEAD` and `OPTIONS` to the proxy `methods` list in `proxy/main.py`
-- [ ] 2.2 BUG-01: Fix duplicate query params — replace `params=dict(request.query_params)` with `params=str(request.query_params)` in `proxy/main.py`
-- [ ] 2.3 BUG-05: Store `asyncio.create_task` references in `proxy/main.py` to prevent premature garbage collection
-- [ ] 2.4 TASK-13: Add `[tool.ruff]` section to `pyproject.toml` with `line-length`, `target-version = "py314"`, and rule sets
+- [x] 2.1 BUG-03: Add `HEAD` and `OPTIONS` to the proxy `methods` list in `proxy/main.py`
+- [x] 2.2 BUG-01: Fix duplicate query params — replace `params=dict(request.query_params)` with `params=str(request.query_params)` in `proxy/main.py`
+- [x] 2.3 BUG-05: Store `asyncio.create_task` references in `proxy/main.py` to prevent premature garbage collection
+- [x] 2.4 TASK-13: Add `[tool.ruff]` section to `pyproject.toml` with `line-length`, `target-version = "py314"`, and rule sets
 
 ## 3. Connection Pooling (TASK-17 / BUG-02)
 
-- [ ] 3.1 Create `app.state.http_client` in the lifespan context manager in `proxy/main.py`
-- [ ] 3.2 Replace `async with httpx.AsyncClient() as client:` per-request pattern with `app.state.http_client`
-- [ ] 3.3 Verify all proxy tests still pass after refactor
+- [x] 3.1 Create `app.state.http_client` in the lifespan context manager in `proxy/main.py`
+- [x] 3.2 Replace `async with httpx.AsyncClient() as client:` per-request pattern with `app.state.http_client`
+- [x] 3.3 Verify all proxy tests still pass after refactor
 
 ## 4. Redis Rate Limiter (TASK-09)
 
-- [ ] 4.1 Add `rate_limit_per_minute: int = 100` to `Settings` in `proxy/config.py`
-- [ ] 4.2 Create `proxy/rate_limiter.py` with sliding window counter using `INCR "rl:{client_ip}"` + `EXPIRE 60`
-- [ ] 4.3 Integrate rate limiter as middleware or FastAPI dependency in `proxy/main.py`
-- [ ] 4.4 Return HTTP 429 when client exceeds threshold
-- [ ] 4.5 Add unit tests for rate limiter (under limit, at limit, over limit)
+- [x] 4.1 Add `rate_limit_per_minute: int = 100` to `Settings` in `proxy/config.py`
+- [x] 4.2 Create `proxy/rate_limiter.py` with sliding window counter using `INCR "rl:{client_ip}"` + `EXPIRE 60`
+- [x] 4.3 Integrate rate limiter as middleware or FastAPI dependency in `proxy/main.py`
+- [x] 4.4 Return HTTP 429 when client exceeds threshold
+- [x] 4.5 Add unit tests for rate limiter (under limit, at limit, over limit)
 
 ## 5. Expand Test Coverage (TASK-12)
 
-- [ ] 5.1 Add test: `_emit_safe` failure does not affect proxy response
-- [ ] 5.2 Add test: `_update_stats_safe` failure does not affect proxy response
-- [ ] 5.3 Add test: Redis unreachable → `GET /stats` returns HTTP 503
-- [ ] 5.4 Add test: stats increment assertions (verify pipeline calls with correct args)
-- [ ] 5.5 Add test: upstream unreachable → proxy returns HTTP 502
-- [ ] 5.6 Run `pytest --cov` and verify coverage ≥ 80%
+- [x] 5.1 Add test: `_emit_safe` failure does not affect proxy response
+- [x] 5.2 Add test: `_update_stats_safe` failure does not affect proxy response
+- [x] 5.3 Add test: Redis unreachable → `GET /stats` returns HTTP 503
+- [x] 5.4 Add test: stats increment assertions (verify pipeline calls with correct args)
+- [x] 5.5 Add test: upstream unreachable → proxy returns HTTP 502
+- [x] 5.6 Run `pytest --cov` and verify coverage ≥ 80%
+
+## Documentation Updates
+
+- [x] Update README.md with rate limiting section
+- [x] Update README.md with HEAD/OPTIONS methods
+- [x] Update README.md with coverage information
+- [x] Update .env.example with RATE_LIMIT_PER_MINUTE
 
 ## 6. Kafka Consumer Service (TASK-10)
 
