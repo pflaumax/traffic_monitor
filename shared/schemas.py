@@ -1,4 +1,5 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
 from pydantic import BaseModel, Field
 
 
@@ -14,7 +15,7 @@ class TrafficEvent(BaseModel):
     path: str
     status_code: int
     response_time_ms: float
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(tz=UTC))
     user_id: str | None = None
 
 

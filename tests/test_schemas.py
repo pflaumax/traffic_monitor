@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from shared.schemas import TrafficEvent
 from shared.topics import TOPIC_HTTP_TRAFFIC
@@ -14,7 +14,7 @@ def test_traffic_event_defaults():
     )
     assert event.user_id is None
     assert isinstance(event.timestamp, datetime)
-    assert event.timestamp.tzinfo == timezone.utc
+    assert event.timestamp.tzinfo == UTC
 
 
 def test_traffic_event_with_user():
