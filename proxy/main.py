@@ -11,7 +11,7 @@ from proxy.config import settings
 from proxy.constants import EXCLUDED_HEADERS, EXCLUDED_RESPONSE_HEADERS
 from proxy.kafka_producer import emit_event, start_producer, stop_producer
 from proxy.rate_limiter import check_rate_limit
-from proxy.redis_client import start_redis, stop_redis, update_stats
+from proxy.redis_client import start_redis, stop_redis
 from shared.schemas import PathCount, StatsResponse, TrafficEvent
 
 logger = logging.getLogger(__name__)
@@ -22,13 +22,6 @@ async def _emit_safe(app, event_dict: dict) -> None:
         await emit_event(app, event_dict)
     except Exception as e:
         logger.error("Failed to emit Kafka event: %s", e)
-
-
-async def _update_stats_safe(app, event_dict: dict) -> None:
-    try:
-        await update_stats(app.state.redis, event_dict)
-    except Exception as e:
-        logger.error("Failed to update Redis stats: %s", e)
 
 
 @asynccontextmanager
@@ -90,13 +83,11 @@ async def proxy_handler(path: str, request: Request) -> Response:
     )
     event_dict = event.model_dump(mode="json")
 
-    # Store task references to prevent premature garbage collection
+    # Store task reference to prevent premature garbage collection
     emit_task = asyncio.create_task(_emit_safe(request.app, event_dict))
-    stats_task = asyncio.create_task(_update_stats_safe(request.app, event_dict))
 
-    # Add done callbacks to clean up task references
+    # Add done callback to clean up task reference
     emit_task.add_done_callback(lambda t: None)
-    stats_task.add_done_callback(lambda t: None)
 
     return Response(
         content=upstream_response.content,

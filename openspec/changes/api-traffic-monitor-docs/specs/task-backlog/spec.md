@@ -79,14 +79,16 @@ The system SHALL implement a sliding window rate limiter in `proxy/rate_limiter.
 - **THEN** the 101st request SHALL return HTTP 429
 
 **TASK-10: Kafka Consumer Service**
-Status: TODO | Priority: P1
-The system SHALL have a separate `consumer/` service with `consumer/main.py`, `consumer/Dockerfile`, and `consumer/__init__.py`. It SHALL use `AIOKafkaConsumer` to read from `http.traffic` and process events. `docker-compose.yml` SHALL be updated to include the consumer service.
-
-**[OPEN QUESTION]** If the consumer writes to Redis, the proxy's direct Redis writes become redundant. Resolve DECISION-01 before implementing.
+Status: DONE | Priority: P1
+The system SHALL have a separate `consumer/` service with `consumer/main.py`, `consumer/config.py`, `consumer/redis_client.py`, `consumer/Dockerfile`, and `consumer/__init__.py`. It SHALL use `AIOKafkaConsumer` to read from `http.traffic` and SHALL own all Redis `stats:*` writes (per DECISION-01). It SHALL commit offsets manually after a successful `update_stats` call (at-least-once). `docker-compose.yml` SHALL be updated to include the consumer service with `depends_on` on Kafka and Redis.
 
 #### Scenario: TASK-10 consumer reads events
 - **WHEN** the consumer service is running and a request is proxied
-- **THEN** the consumer SHALL receive and process the Kafka event
+- **THEN** the consumer SHALL receive the Kafka event and update the `stats:*` Redis keys exactly once under normal operation
+
+#### Scenario: TASK-10 at-least-once processing
+- **WHEN** the consumer fails to process a message (e.g., Redis unreachable)
+- **THEN** the Kafka offset SHALL NOT be committed and the message SHALL be redelivered
 
 **TASK-11: Dashboard Service**
 Status: TODO | Priority: P2
@@ -98,7 +100,7 @@ The system SHALL have a `dashboard/` service. Phase 1: static `dashboard/index.h
 
 **TASK-12: Expand Test Coverage**
 Status: TODO | Priority: P1
-The test suite SHALL be expanded to cover: `_emit_safe` failure doesn't affect proxy response; `_update_stats_safe` failure doesn't affect proxy response; Redis unreachable → `/stats` returns 503; stats increment assertions; upstream unreachable → proxy returns 502. Coverage SHALL reach ≥80%.
+The test suite SHALL be expanded to cover: `_emit_safe` failure doesn't affect proxy response; Redis unreachable → `/stats` returns 503; proxy emits a Kafka event per request and does NOT write `stats:*` directly; upstream unreachable → proxy returns 502; consumer `update_stats` updates all 6 `stats:*` keys atomically; consumer Redis failure leaves the offset uncommitted. Coverage SHALL reach ≥80%.
 
 #### Scenario: TASK-12 coverage threshold
 - **WHEN** `pytest --cov` is run
@@ -172,8 +174,8 @@ Status: BUG | Priority: P2 | File: `proxy/main.py`
 - **THEN** the proxy SHALL forward it to the upstream
 
 **BUG-04: No Redis Key TTL**
-Status: BUG | Priority: P2 | File: `proxy/redis_client.py`
-`stats:*` keys accumulate forever with no rolling window. Resolve DECISION-02 before fixing.
+Status: BUG | Priority: P2 | File: `consumer/redis_client.py`
+`stats:*` keys accumulate forever with no rolling window. Resolve DECISION-02 before fixing; the `EXPIRE` calls SHALL be added to the consumer's `update_stats` pipeline (writes now live in the consumer per DECISION-01).
 
 #### Scenario: BUG-04 TTL behavior
 - **WHEN** DECISION-02 is resolved and TTL is implemented
@@ -181,11 +183,11 @@ Status: BUG | Priority: P2 | File: `proxy/redis_client.py`
 
 **BUG-05: asyncio.create_task Without Stored Reference**
 Status: BUG | Priority: P2 | File: `proxy/main.py`
-`asyncio.create_task()` without storing the reference — tasks could be garbage collected before completion in edge cases. The `_safe` wrappers mitigate this but it is not ideal.
+`asyncio.create_task()` without storing the reference — tasks could be garbage collected before completion in edge cases. The `_emit_safe` wrapper mitigates this but it is not ideal.
 
 #### Scenario: BUG-05 task reference
-- **WHEN** `_emit_safe` and `_update_stats_safe` tasks are created
-- **THEN** their references SHALL be stored to prevent premature garbage collection
+- **WHEN** the `_emit_safe` task is created
+- **THEN** its reference SHALL be stored to prevent premature garbage collection
 
 ### Requirement: DECISION Tasks — Open Architecture Questions
 The task backlog SHALL include the following decision tasks:

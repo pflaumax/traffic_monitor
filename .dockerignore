@@ -5,7 +5,6 @@ __pycache__
 .env
 .git
 .gitignore
-consumer
 dashboard
 .DS_Store
 **/.DS_Store

@@ -1,9 +1,9 @@
 ## 1. Resolve Blocking Architecture Decisions
 
-- [ ] 1.1 DECISION-01: Decide whether proxy writes Redis directly or Kafka consumer handles Redis writes (blocks Kafka consumer implementation)
-- [ ] 1.2 DECISION-02: Decide whether `stats:*` Redis keys should have TTL for a rolling window (blocks BUG-04 fix)
-- [ ] 1.3 DECISION-03: Decide whether `/stats` should return raw counters or rates (req/sec)
-- [ ] 1.4 DECISION-04: Decide Kafka's role — transient buffer or source of truth with Redis as read cache
+- [x] 1.1 DECISION-01: Decide whether proxy writes Redis directly or Kafka consumer handles Redis writes (blocks Kafka consumer implementation)
+- [x] 1.2 DECISION-02: Decide whether `stats:*` Redis keys should have TTL for a rolling window (blocks BUG-04 fix)
+- [x] 1.3 DECISION-03: Decide whether `/stats` should return raw counters or rates (req/sec)
+- [x] 1.4 DECISION-04: Decide Kafka's role — transient buffer or source of truth with Redis as read cache
 
 ## 2. Bug Fixes (Quick Wins)
 
@@ -44,13 +44,13 @@
 
 ## 6. Kafka Consumer Service (TASK-10)
 
-- [ ] 6.1 Confirm DECISION-01 and DECISION-04 are resolved before starting
-- [ ] 6.2 Create `consumer/__init__.py`
-- [ ] 6.3 Create `consumer/main.py` with `AIOKafkaConsumer` reading from `http.traffic`
-- [ ] 6.4 Implement event processing logic (per DECISION-01 outcome)
-- [ ] 6.5 Create `consumer/Dockerfile` (multi-stage, non-root user, mirrors `proxy/Dockerfile` pattern)
-- [ ] 6.6 Add `consumer` service to `docker-compose.yml` with `depends_on: kafka`
-- [ ] 6.7 Verify consumer starts and reads events when proxy is running
+- [x] 6.1 Confirm DECISION-01 and DECISION-04 are resolved before starting
+- [x] 6.2 Create `consumer/__init__.py`
+- [x] 6.3 Create `consumer/main.py` with `AIOKafkaConsumer` reading from `http.traffic`
+- [x] 6.4 Implement event processing logic (per DECISION-01 outcome)
+- [x] 6.5 Create `consumer/Dockerfile` (multi-stage, non-root user, mirrors `proxy/Dockerfile` pattern)
+- [x] 6.6 Add `consumer` service to `docker-compose.yml` with `depends_on: kafka`
+- [x] 6.7 Verify consumer starts and reads events when proxy is running
 
 ## 7. Redis TTL / Rolling Window (BUG-04)
 
