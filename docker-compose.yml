@@ -58,3 +58,25 @@ services:
         - path: ./shared
           target: /app/shared
           action: sync+restart
+
+  consumer:
+    build:
+      context: .
+      dockerfile: consumer/Dockerfile
+    env_file:
+      - .env
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    depends_on:
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    develop:
+      watch:
+        - path: ./consumer
+          target: /app/consumer
+          action: sync+restart
+        - path: ./shared
+          target: /app/shared
+          action: sync+restart

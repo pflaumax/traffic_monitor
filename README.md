@@ -6,15 +6,27 @@ HTTP reverse proxy that forwards requests to an upstream API and emits traffic e
 
 ```
 Client → FastAPI Proxy → Upstream API (httpbin.org)
-                ↓                ↓
-            Kafka           Redis (metrics)
-        (http.traffic)      (stats:*)
+                ↓
+            Kafka (http.traffic)
+                ↓
+            Consumer → Redis (stats:*)
+                         ↑
+            FastAPI /stats reads
 ```
 
-- `proxy/` — FastAPI app that proxies HTTP requests and emits traffic events
+- `proxy/` — FastAPI app that proxies HTTP requests, enforces per-IP rate limiting, and emits traffic events to Kafka
 - `shared/` — shared schemas and constants (Pydantic models, Kafka topics)
-- `consumer/` — Kafka consumer (planned)
+- `consumer/` — Kafka consumer that aggregates traffic events into Redis (owns all `stats:*` writes)
 - `dashboard/` — analytics dashboard (planned)
+
+## Consumer Groups
+
+Kafka distributes partitions across consumer instances by `group_id`:
+
+- **Same `group_id` → horizontal scaling.** Running multiple consumer replicas with `KAFKA_GROUP_ID=traffic-consumer-group` splits `http.traffic` partitions across them. Each event is processed by exactly one replica.
+- **Distinct `group_id` → independent pipelines.** A new service (for example alerting, retention, or archival) SHALL use its own `KAFKA_GROUP_ID` so it receives every event independently of the stats aggregator.
+
+Tune consumer behavior via environment variables documented in `.env.example` (session timeout, poll interval, fetch batching, etc.).
 
 ## Rate Limiting
 
@@ -30,18 +42,19 @@ Rate limit keys: `rl:{client_ip}` (60-second TTL)
 
 ## Redis Metrics
 
-After each proxied request, the proxy atomically writes aggregated stats to Redis using a pipeline. The `/stats` endpoint reads them back in parallel via `asyncio.gather`. Tracked keys:
+The **consumer service** reads `http.traffic` from Kafka and atomically writes aggregated stats to Redis using a transactional pipeline. The `/stats` endpoint on the proxy reads them back in parallel via `asyncio.gather`. Tracked keys:
 
-| Key | Type | Description |
-|---|---|---|
-| `stats:total_requests` | string (int) | Total proxied requests |
-| `stats:status_codes` | hash | Count per HTTP status code |
-| `stats:methods` | hash | Count per HTTP method |
-| `stats:response_time_sum` / `stats:response_time_count` | string (float/int) | Running average response time |
-| `stats:top_paths` | sorted set | Most requested paths (top 10) |
-| `rl:{client_ip}` | string (int) | Rate limit counter per IP (60s TTL) |
+| Key | Type | Description | Writer |
+|---|---|---|---|
+| `stats:total_requests` | string (int) | Total proxied requests | consumer |
+| `stats:status_codes` | hash | Count per HTTP status code | consumer |
+| `stats:methods` | hash | Count per HTTP method | consumer |
+| `stats:response_time_sum` / `stats:response_time_count` | string (float/int) | Running average response time | consumer |
+| `stats:top_paths` | sorted set | Most requested paths (top 10) | consumer |
+| `stats:dead_letter` | list | Poison-pill / structurally invalid events (capped at `DEAD_LETTER_MAX_LEN`) | consumer |
+| `rl:{client_ip}` | string (int) | Rate limit counter per IP (60s TTL) | proxy |
 
-Stats writes are fire-and-forget — a Redis failure never affects the proxy response. If Redis is unreachable, `/stats` returns `503`.
+The consumer processes events with **at-least-once** semantics: Kafka offsets are committed manually after a successful Redis write. If Redis is unreachable, the offset stays uncommitted and Kafka redelivers on the next poll. After `KAFKA_MAX_MESSAGE_RETRIES` failed redeliveries of the same offset, or when a payload is structurally invalid, the message is routed to the `stats:dead_letter` Redis list so the partition does not stall on a poison pill. If Redis is unreachable when `/stats` is read, the endpoint returns `503`.
 
 ## Quick Start
 
@@ -118,8 +131,8 @@ ruff format .
 pytest
 
 # run tests with coverage
-pytest --cov=proxy --cov=shared tests/
-# Current coverage: 86%
+pytest --cov=proxy --cov=consumer --cov=shared tests/
+# Current coverage: 92%
 ```
 
 ## Tech Stack
