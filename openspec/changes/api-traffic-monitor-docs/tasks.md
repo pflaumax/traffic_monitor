@@ -61,22 +61,22 @@
 
 ## 8. Dashboard — Phase 1 Static Demo (TASK-11)
 
-- [ ] 8.1 Create `dashboard/index.html` with Chart.js CDN
-- [ ] 8.2 Implement `fetch('/stats')` polling every 3 seconds
-- [ ] 8.3 Render total requests, avg latency, error rate as large numbers
-- [ ] 8.4 Render top endpoints as a table
-- [ ] 8.5 Render status code breakdown as a pie/bar chart
-- [ ] 8.6 Render HTTP method breakdown as a bar chart
-- [ ] 8.7 Serve `dashboard/index.html` via FastAPI `StaticFiles` or a minimal nginx service
-- [ ] 8.8 Verify dashboard displays live data from running proxy
+- [x] 8.1 Create `dashboard/index.html` with Chart.js CDN
+- [x] 8.2 Implement `fetch('/stats')` polling every 3 seconds
+- [x] 8.3 Render total requests, avg latency, error rate as large numbers
+- [x] 8.4 Render top endpoints as a table
+- [x] 8.5 Render status code breakdown as a pie/bar chart
+- [x] 8.6 Render HTTP method breakdown as a bar chart
+- [x] 8.7 Serve `dashboard/index.html` via FastAPI `StaticFiles` or a minimal nginx service
+- [x] 8.8 Verify dashboard displays live data from running proxy
 
 ## 9. Dashboard — Phase 2 HTMX Service (TASK-11 continued)
 
-- [ ] 9.1 Create `dashboard/` FastAPI app with Jinja2 templates
-- [ ] 9.2 Add HTMX polling for real-time DOM updates (3s interval)
-- [ ] 9.3 Create `dashboard/Dockerfile`
-- [ ] 9.4 Add `dashboard` service to `docker-compose.yml` with Compose Watch
-- [ ] 9.5 Verify dashboard accessible at `http://localhost:8080/dashboard`
+- [x] 9.1 Create `dashboard/` FastAPI app with Jinja2 templates
+- [x] 9.2 Add HTMX polling for real-time DOM updates (3s interval)
+- [x] 9.3 Create `dashboard/Dockerfile`
+- [x] 9.4 Add `dashboard` service to `docker-compose.yml` with Compose Watch
+- [x] 9.5 Verify dashboard accessible at `http://localhost:8080/dashboard`
 
 ## 10. Stats History Endpoint (for Dashboard Line Chart)
 

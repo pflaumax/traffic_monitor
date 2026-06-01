@@ -80,3 +80,20 @@ services:
         - path: ./shared
           target: /app/shared
           action: sync+restart
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: dashboard/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      PROXY_URL: http://proxy:8000
+    depends_on:
+      proxy:
+        condition: service_started
+    develop:
+      watch:
+        - path: ./dashboard
+          target: /app
+          action: sync+restart
