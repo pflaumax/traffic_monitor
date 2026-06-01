@@ -1,4 +1,5 @@
 import logging
+import os
 from typing import Any
 
 import httpx
@@ -12,7 +13,6 @@ app = FastAPI(title="Traffic Monitor")
 templates = Jinja2Templates(directory="templates")
 
 # Proxy URL (configurable via environment)
-import os
 PROXY_URL = os.getenv("PROXY_URL", "http://proxy:8000")
 
 
