@@ -54,10 +54,10 @@
 
 ## 7. Redis TTL / Rolling Window (BUG-04)
 
-- [ ] 7.1 Confirm DECISION-02 is resolved before starting
-- [ ] 7.2 If TTL chosen: add `EXPIRE` calls to `update_stats` pipeline in `proxy/redis_client.py`
-- [ ] 7.3 Update `GET /stats` response if rolling window changes semantics
-- [ ] 7.4 Add tests for TTL behavior
+- [x] 7.1 Confirm DECISION-02 is resolved before starting
+- [x] 7.2 If TTL chosen: add `EXPIRE` calls to `update_stats` pipeline in `consumer/redis_client.py`
+- [x] 7.3 Update `GET /stats` response if rolling window changes semantics
+- [x] 7.4 Add tests for TTL behavior
 
 ## 8. Dashboard — Phase 1 Static Demo (TASK-11)
 
