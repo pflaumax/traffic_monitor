@@ -5,14 +5,20 @@ from contextlib import asynccontextmanager
 
 import httpx
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import Response
 
 from proxy.config import settings
 from proxy.constants import EXCLUDED_HEADERS, EXCLUDED_RESPONSE_HEADERS
 from proxy.kafka_producer import emit_event, start_producer, stop_producer
 from proxy.rate_limiter import check_rate_limit
 from proxy.redis_client import start_redis, stop_redis
-from shared.schemas import PathCount, StatsResponse, TrafficEvent
+from shared.schemas import (
+    HistoryPoint,
+    PathCount,
+    StatsHistoryResponse,
+    StatsResponse,
+    TrafficEvent,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -121,9 +127,7 @@ async def get_stats(request: Request) -> StatsResponse:
         )
     except Exception as e:
         logger.error("Redis unavailable: %s", e)
-        return JSONResponse(
-            status_code=503, content={"detail": "Stats unavailable: Redis unreachable"}
-        )
+        raise HTTPException(status_code=503, detail="Stats unavailable: Redis unreachable") from e
 
     total = int(total_raw) if total_raw else 0
     time_sum = float(time_sum_raw) if time_sum_raw else 0.0
@@ -131,10 +135,28 @@ async def get_stats(request: Request) -> StatsResponse:
 
     return StatsResponse(
         total_requests=total,
-        status_codes={k.decode(): int(v) for k, v in status_raw.items()},
-        methods={k.decode(): int(v) for k, v in methods_raw.items()},
+        status_codes={k: int(v) for k, v in status_raw.items()},
+        methods={k: int(v) for k, v in methods_raw.items()},
         avg_response_time_ms=round(time_sum / time_count, 2) if time_count else 0.0,
-        top_paths=[
-            PathCount(path=path.decode(), count=int(score)) for path, score in top_paths_raw
-        ],
+        top_paths=[PathCount(path=path, count=int(score)) for path, score in top_paths_raw],
     )
+
+
+@app.get("/stats/history", response_model=StatsHistoryResponse)
+async def get_stats_history(request: Request, limit: int = 60) -> StatsHistoryResponse:
+    """Get time-series request count history for dashboard line chart."""
+    redis = request.app.state.redis
+    try:
+        history_raw = await redis.zrevrange("stats:history", 0, limit - 1, withscores=True)
+    except Exception as e:
+        logger.error("Redis unavailable for history: %s", e)
+        raise HTTPException(
+            status_code=503, detail="Stats history unavailable: Redis unreachable"
+        ) from e
+
+    history = [
+        HistoryPoint(timestamp=int(timestamp), count=int(count))
+        for timestamp, count in reversed(history_raw)
+    ]
+
+    return StatsHistoryResponse(history=history)

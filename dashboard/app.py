@@ -173,3 +173,18 @@ async def charts_data():
             "methods": stats.get("methods", {}),
         }
     )
+
+
+@app.get("/fragments/history")
+async def history_data(limit: int = 60):
+    """Return stats:history time-series data as JSON for the line chart."""
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{PROXY_URL}/stats/history", params={"limit": limit}, timeout=5.0
+            )
+            response.raise_for_status()
+            return JSONResponse(response.json())
+    except Exception as e:
+        logger.error("Failed to fetch history: %s", e)
+        return JSONResponse({"history": []})

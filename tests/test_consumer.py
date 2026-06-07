@@ -40,7 +40,7 @@ def sample_event() -> dict:
 
 
 async def test_update_stats_calls_pipeline_with_six_ops(mock_redis, mock_pipeline, sample_event):
-    """update_stats SHALL issue the six aggregation commands atomically."""
+    """update_stats SHALL issue the six aggregation commands plus history atomically."""
     pipe, _cm = mock_pipeline
 
     await update_stats(mock_redis, sample_event)
@@ -51,17 +51,19 @@ async def test_update_stats_calls_pipeline_with_six_ops(mock_redis, mock_pipelin
     pipe.hincrby.assert_any_call("stats:methods", "GET", 1)
     pipe.incrbyfloat.assert_called_once_with("stats:response_time_sum", 42.5)
     pipe.incr.assert_any_call("stats:response_time_count")
-    pipe.zincrby.assert_called_once_with("stats:top_paths", 1, "/get")
+    pipe.zincrby.assert_any_call("stats:top_paths", 1, "/get")
+    # history zincrby is also expected
+    assert pipe.zincrby.call_count == 2
     pipe.execute.assert_awaited_once()
 
 
 async def test_update_stats_sets_ttl_on_all_keys(mock_redis, mock_pipeline, sample_event):
-    """update_stats SHALL set TTL on all six stats keys for rolling window."""
+    """update_stats SHALL set TTL on all seven stats keys (6 stats + history) for rolling window."""
     pipe, _cm = mock_pipeline
 
     await update_stats(mock_redis, sample_event)
 
-    # Verify EXPIRE is called for all 6 stats keys with the configured TTL
+    # Verify EXPIRE is called for all 6 stats keys + history key with configured TTL
     expected_ttl = settings.stats_ttl_seconds
     pipe.expire.assert_any_call("stats:total_requests", expected_ttl)
     pipe.expire.assert_any_call("stats:status_codes", expected_ttl)
@@ -69,7 +71,8 @@ async def test_update_stats_sets_ttl_on_all_keys(mock_redis, mock_pipeline, samp
     pipe.expire.assert_any_call("stats:response_time_sum", expected_ttl)
     pipe.expire.assert_any_call("stats:response_time_count", expected_ttl)
     pipe.expire.assert_any_call("stats:top_paths", expected_ttl)
-    assert pipe.expire.call_count == 6
+    pipe.expire.assert_any_call("stats:history", expected_ttl)
+    assert pipe.expire.call_count == 7
 
 
 async def test_update_stats_ttl_uses_configured_value(

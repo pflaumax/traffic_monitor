@@ -327,6 +327,14 @@
             </div>
         </div>
         
+        <!-- Requests/min Line Chart -->
+        <div class="panel" style="margin-bottom: 1.5rem;">
+            <h2 class="section-header">Requests per Minute (Last Hour)</h2>
+            <div class="chart-container">
+                <canvas id="historyChart"></canvas>
+            </div>
+        </div>
+        
         <!-- Bottom Grid -->
         <div class="bottom-grid">
             <!-- Top Endpoints with HTMX polling -->
@@ -402,6 +410,81 @@
             if (codeNum >= 500) return '#f87171'; // red
             return '#4ade80'; // default green
         }
+        
+        // Helper: Format timestamp to readable time
+        function formatTime(timestamp) {
+            const date = new Date(timestamp * 1000);
+            return date.toLocaleTimeString('en-US', { 
+                hour12: false, 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+        }
+        
+        // History Line Chart
+        const historyCtx = document.getElementById('historyChart').getContext('2d');
+        const historyChart = new Chart(historyCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Requests/min',
+                    data: [],
+                    borderColor: '#22c55e',
+                    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 3,
+                    pointHoverRadius: 5,
+                    pointBackgroundColor: '#22c55e',
+                    pointBorderColor: '#0a0f0d',
+                    pointBorderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: '#1f3028'
+                        },
+                        ticks: {
+                            color: '#4ade80'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            color: '#1f3028'
+                        },
+                        ticks: {
+                            color: '#4ade80',
+                            maxRotation: 45,
+                            minRotation: 45
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: '#111a15',
+                        titleColor: '#f0fdf4',
+                        bodyColor: '#86efac',
+                        borderColor: '#22c55e',
+                        borderWidth: 1,
+                        padding: 12,
+                        displayColors: false
+                    }
+                }
+            }
+        });
         
         // Status Codes Chart
         const statusCodesCtx = document.getElementById('statusCodesChart').getContext('2d');
@@ -519,11 +602,31 @@
             }
         }
         
+        // Update history line chart
+        async function updateHistory() {
+            try {
+                const response = await fetch('/fragments/history?limit=60');
+                const data = await response.json();
+                
+                if (data.history && data.history.length > 0) {
+                    historyChart.data.labels = data.history.map(point => formatTime(point.timestamp));
+                    historyChart.data.datasets[0].data = data.history.map(point => point.count);
+                    historyChart.update('none');
+                }
+            } catch (error) {
+                console.error('Failed to update history:', error);
+            }
+        }
+        
         // Poll charts every 3 seconds
         setInterval(updateCharts, 3000);
         
+        // Poll history every 3 seconds
+        setInterval(updateHistory, 3000);
+        
         // Initial chart update
         updateCharts();
+        updateHistory();
     </script>
 </body>
 </html>

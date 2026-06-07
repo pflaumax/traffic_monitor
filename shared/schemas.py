@@ -34,3 +34,16 @@ class StatsResponse(BaseModel):
     methods: dict[str, int]
     avg_response_time_ms: float
     top_paths: list[PathCount]
+
+
+class HistoryPoint(BaseModel):
+    """Single time-series data point for stats history."""
+
+    timestamp: int
+    count: int
+
+
+class StatsHistoryResponse(BaseModel):
+    """Response model for /stats/history endpoint."""
+
+    history: list[HistoryPoint]
