@@ -86,6 +86,6 @@
 
 ## 11. Auth and Observability (TASK-14, TASK-15, TASK-16)
 
-- [ ] 11.1 TASK-14: Add JWT auth dependency to `GET /stats`; return HTTP 401 for unauthenticated requests
-- [ ] 11.2 TASK-15: Add `GET /metrics` endpoint in Prometheus exposition format
-- [ ] 11.3 TASK-16: Replace `print` statements with Loguru JSON structured logging throughout `proxy/`
+- [x] 11.1 TASK-14: Add JWT auth dependency to `GET /stats`; return HTTP 401 for unauthenticated requests
+- [x] 11.2 TASK-15: Add `GET /metrics` endpoint in Prometheus exposition format
+- [x] 11.3 TASK-16: Replace `print` statements with Loguru JSON structured logging throughout `proxy/`

@@ -1,10 +1,11 @@
+import html
 import logging
 import os
 from typing import Any
 
 import httpx
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import FastAPI, Form, Request
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 logger = logging.getLogger(__name__)
@@ -15,12 +16,20 @@ templates = Jinja2Templates(directory="templates")
 # Proxy URL (configurable via environment)
 PROXY_URL = os.getenv("PROXY_URL", "http://proxy:8000")
 
+AUTH_COOKIE = "tm_token"
 
-async def fetch_stats() -> dict[str, Any] | None:
-    """Fetch stats from the proxy service."""
+
+async def fetch_stats(token: str) -> dict[str, Any] | None:
+    """Fetch stats from the proxy service using a Bearer token."""
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.get(f"{PROXY_URL}/stats", timeout=5.0)
+            response = await client.get(
+                f"{PROXY_URL}/stats",
+                headers={"Authorization": f"Bearer {token}"},
+                timeout=5.0,
+            )
+            if response.status_code == 401:
+                return None
             response.raise_for_status()
             return response.json()
     except Exception as e:
@@ -43,19 +52,73 @@ def calculate_error_rate(stats: dict[str, Any]) -> float:
     return round((error_count / total) * 100, 2)
 
 
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
+    """Render the login page."""
+    return templates.TemplateResponse(request=request, name="login.html", context={})
+
+
+@app.post("/login")
+async def login(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+):
+    """Exchange credentials for a JWT via the proxy and set a session cookie."""
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                f"{PROXY_URL}/auth/token",
+                data={"username": username, "password": password},
+                timeout=5.0,
+            )
+        if resp.status_code == 200:
+            token = resp.json()["access_token"]
+            response = RedirectResponse(url="/", status_code=303)
+            response.set_cookie(AUTH_COOKIE, token, httponly=True, samesite="lax")
+            return response
+        # Bad credentials
+        return templates.TemplateResponse(
+            request=request,
+            name="login.html",
+            context={"error": "Invalid username or password"},
+            status_code=401,
+        )
+    except Exception as e:
+        logger.error("Login request failed: %s", e)
+        return templates.TemplateResponse(
+            request=request,
+            name="login.html",
+            context={"error": "Could not reach the proxy service"},
+            status_code=503,
+        )
+
+
+@app.post("/logout")
+async def logout():
+    """Clear the session cookie and redirect to login."""
+    response = RedirectResponse(url="/login", status_code=303)
+    response.delete_cookie(AUTH_COOKIE)
+    return response
+
+
+def _get_token(request: Request) -> str | None:
+    return request.cookies.get(AUTH_COOKIE)
+
+
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     """Render the main dashboard page."""
-    stats = await fetch_stats()
+    token = _get_token(request)
+    if not token:
+        return RedirectResponse(url="/login", status_code=302)
+
+    stats = await fetch_stats(token)
 
     if stats is None:
-        stats = {
-            "total_requests": 0,
-            "avg_response_time_ms": 0.0,
-            "status_codes": {},
-            "methods": {},
-            "top_paths": [],
-        }
+        response = RedirectResponse(url="/login", status_code=302)
+        response.delete_cookie(AUTH_COOKIE)
+        return response
 
     error_rate = calculate_error_rate(stats)
 
@@ -76,7 +139,11 @@ async def index(request: Request):
 @app.get("/fragments/kpis", response_class=HTMLResponse)
 async def kpis_fragment(request: Request):
     """Return KPI cards HTML fragment."""
-    stats = await fetch_stats()
+    token = _get_token(request)
+    if not token:
+        return HTMLResponse(status_code=401)
+
+    stats = await fetch_stats(token)
 
     if stats is None:
         return HTMLResponse(
@@ -119,9 +186,13 @@ async def kpis_fragment(request: Request):
 
 
 @app.get("/fragments/top-paths", response_class=HTMLResponse)
-async def top_paths_fragment():
+async def top_paths_fragment(request: Request):
     """Return top paths table rows HTML fragment."""
-    stats = await fetch_stats()
+    token = _get_token(request)
+    if not token:
+        return HTMLResponse(status_code=401)
+
+    stats = await fetch_stats(token)
 
     if stats is None or not stats.get("top_paths"):
         return HTMLResponse(
@@ -136,7 +207,7 @@ async def top_paths_fragment():
 
     rows = []
     for item in stats["top_paths"]:
-        path = item.get("path", "—")
+        path = html.escape(item.get("path", "—"))
         count = item.get("count", 0)
         rows.append(
             f"""
@@ -158,9 +229,13 @@ async def top_paths_fragment():
 
 
 @app.get("/fragments/charts")
-async def charts_data():
+async def charts_data(request: Request):
     """Return chart data as JSON for client-side Chart.js updates."""
-    stats = await fetch_stats()
+    token = _get_token(request)
+    if not token:
+        return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
+
+    stats = await fetch_stats(token)
 
     if stats is None:
         return JSONResponse(
@@ -176,12 +251,19 @@ async def charts_data():
 
 
 @app.get("/fragments/history")
-async def history_data(limit: int = 60):
+async def history_data(request: Request, limit: int = 60):
     """Return stats:history time-series data as JSON for the line chart."""
+    token = _get_token(request)
+    if not token:
+        return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
+
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(
-                f"{PROXY_URL}/stats/history", params={"limit": limit}, timeout=5.0
+                f"{PROXY_URL}/stats/history",
+                params={"limit": limit},
+                headers={"Authorization": f"Bearer {token}"},
+                timeout=5.0,
             )
             response.raise_for_status()
             return JSONResponse(response.json())

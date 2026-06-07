@@ -12,6 +12,11 @@ dependencies = [
     "pydantic>=2.12.5",
     "pydantic-settings>=2.13.1",
     "uvicorn>=0.41.0",
+    "python-jose[cryptography]>=3.3.0",
+    "bcrypt>=4.0.0",
+    "python-multipart>=0.0.9",
+    "loguru>=0.7.2",
+    "prometheus-client>=0.21.0",
 ]
 
 [tool.uv]
