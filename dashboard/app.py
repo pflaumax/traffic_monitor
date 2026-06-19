@@ -6,11 +6,13 @@ from typing import Any
 import httpx
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Traffic Monitor")
+app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 # Proxy URL (configurable via environment)

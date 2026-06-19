@@ -4,308 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Traffic Monitor</title>
-    
+
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-    
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="/static/base.css">
+    <link rel="stylesheet" href="/static/dashboard.css">
+
     <!-- HTMX -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    
+
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
-    <style>
-        :root {
-            --bg-primary: #0a0f0d;
-            --bg-surface: #111a15;
-            --bg-elevated: #162010;
-            --border: #1f3028;
-            --accent-green: #22c55e;
-            --accent-dim: #16a34a;
-            --accent-glow: rgba(34, 197, 94, 0.15);
-            --text-primary: #f0fdf4;
-            --text-secondary: #86efac;
-            --text-muted: #4ade80;
-            --error: #f87171;
-            --warning: #fbbf24;
-        }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Inter', sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            min-height: 100vh;
-            padding: 0;
-        }
-        
-        /* Navbar */
-        .navbar {
-            background: var(--bg-surface);
-            border-bottom: 1px solid var(--border);
-            padding: 1rem 2rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        
-        .navbar-left {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-        
-        .logo {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: var(--accent-green);
-            font-family: 'JetBrains Mono', monospace;
-        }
-        
-        .title {
-            font-size: 0.875rem;
-            color: var(--text-secondary);
-            font-weight: 500;
-        }
-        
-        .pulse-container {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        
-        .pulse-dot {
-            width: 8px;
-            height: 8px;
-            background: var(--accent-green);
-            border-radius: 50%;
-            animation: pulse 2s ease-in-out infinite;
-        }
-        
-        @keyframes pulse {
-            0%, 100% {
-                opacity: 1;
-                transform: scale(1);
-            }
-            50% {
-                opacity: 0.5;
-                transform: scale(1.1);
-            }
-        }
-        
-        .status-text {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            font-family: 'JetBrains Mono', monospace;
-        }
-        
-        .navbar-right {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-        
-        .last-updated {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            font-family: 'JetBrains Mono', monospace;
-        }
-        
-        .status-badge {
-            padding: 0.25rem 0.75rem;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            font-family: 'JetBrains Mono', monospace;
-            background: rgba(34, 197, 94, 0.2);
-            color: var(--accent-green);
-        }
-        
-        .logout-btn {
-            padding: 0.25rem 0.75rem;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            font-family: 'JetBrains Mono', monospace;
-            background: transparent;
-            border: 1px solid var(--border);
-            color: var(--text-muted);
-            cursor: pointer;
-            transition: border-color 0.2s, color 0.2s;
-        }
-        
-        .logout-btn:hover {
-            border-color: var(--accent-green);
-            color: var(--accent-green);
-        }
-        
-        /* Main Container */
-        .container {
-            padding: 2rem;
-            max-width: 1600px;
-            margin: 0 auto;
-        }
-        
-        /* KPI Cards */
-        .kpi-row {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-        
-        .kpi-card {
-            background: var(--bg-surface);
-            border: 1px solid var(--border);
-            border-top: 2px solid var(--accent-green);
-            border-radius: 8px;
-            padding: 1.5rem;
-            box-shadow: 0 0 20px var(--accent-glow);
-            transition: transform 0.2s ease;
-        }
-        
-        .kpi-card:hover {
-            transform: translateY(-2px);
-        }
-        
-        .kpi-label {
-            font-size: 0.65rem;
-            text-transform: uppercase;
-            letter-spacing: 0.15em;
-            color: var(--text-muted);
-            margin-bottom: 0.75rem;
-            font-weight: 600;
-        }
-        
-        .kpi-value {
-            font-size: 3rem;
-            font-weight: 700;
-            color: var(--accent-green);
-            font-family: 'JetBrains Mono', monospace;
-            line-height: 1;
-            transition: all 0.3s ease;
-        }
-        
-        .kpi-unit {
-            font-size: 1.25rem;
-            color: var(--text-secondary);
-            margin-left: 0.5rem;
-        }
-        
-        /* Section Header */
-        .section-header {
-            font-size: 0.65rem;
-            text-transform: uppercase;
-            letter-spacing: 0.15em;
-            color: var(--text-muted);
-            margin-bottom: 1rem;
-            font-weight: 600;
-        }
-        
-        /* Bottom Grid */
-        .bottom-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 1.5rem;
-        }
-        
-        .panel {
-            background: var(--bg-surface);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 1.5rem;
-        }
-        
-        /* Table */
-        .table-container {
-            overflow-y: auto;
-            max-height: 400px;
-        }
-        
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.875rem;
-        }
-        
-        thead {
-            position: sticky;
-            top: 0;
-            background: var(--bg-surface);
-            z-index: 10;
-        }
-        
-        th {
-            text-align: left;
-            padding: 0.75rem 0.5rem;
-            color: var(--text-muted);
-            font-weight: 600;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            border-bottom: 1px solid var(--border);
-        }
-        
-        td {
-            padding: 0.75rem 0.5rem;
-            color: var(--text-secondary);
-            border-bottom: 1px solid var(--border);
-        }
-        
-        tbody tr {
-            transition: background 0.15s ease;
-        }
-        
-        tbody tr:hover {
-            background: var(--bg-elevated);
-        }
-        
-        .path-cell {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        
-        .status-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: var(--accent-green);
-        }
-        
-        .count-cell {
-            color: var(--accent-green);
-            font-weight: 700;
-        }
-        
-        /* Charts */
-        .chart-container {
-            position: relative;
-            height: 300px;
-        }
-        
-        /* Empty State */
-        .empty-state {
-            text-align: center;
-            padding: 3rem 1rem;
-            color: var(--text-muted);
-            font-family: 'JetBrains Mono', monospace;
-        }
-        
-        /* HTMX Loading Indicator */
-        .htmx-swapping {
-            opacity: 0.5;
-            transition: opacity 0.2s ease;
-        }
-    </style>
 </head>
 <body>
     <!-- Navbar -->
@@ -321,18 +34,19 @@
         <div class="navbar-right">
             <span class="last-updated" id="lastUpdated">—</span>
             <span class="status-badge">● live</span>
-            <form method="post" action="/logout" style="margin: 0;">
+            <form method="post" action="/logout">
                 <button type="submit" class="logout-btn">Sign out</button>
             </form>
         </div>
     </nav>
-    
+
     <!-- Main Container -->
     <div class="container">
-        <!-- KPI Cards with HTMX polling -->
-        <div class="kpi-row" 
-             hx-get="/fragments/kpis" 
-             hx-trigger="every 3s" 
+
+        <!-- KPI Cards -->
+        <div class="kpi-row"
+             hx-get="/fragments/kpis"
+             hx-trigger="every 3s"
              hx-swap="innerHTML">
             <div class="kpi-card">
                 <div class="kpi-label">Total Requests</div>
@@ -347,18 +61,19 @@
                 <div class="kpi-value">{{ error_rate }}<span class="kpi-unit">%</span></div>
             </div>
         </div>
-        
-        <!-- Requests/min Line Chart -->
-        <div class="panel" style="margin-bottom: 1.5rem;">
+
+        <!-- Requests / min Line Chart -->
+        <div class="panel panel--mb">
             <h2 class="section-header">Requests per Minute (Last Hour)</h2>
             <div class="chart-container">
                 <canvas id="historyChart"></canvas>
             </div>
         </div>
-        
+
         <!-- Bottom Grid -->
         <div class="bottom-grid">
-            <!-- Top Endpoints with HTMX polling -->
+
+            <!-- Top Endpoints -->
             <div class="panel">
                 <h2 class="section-header">Top Endpoints</h2>
                 <div class="table-container">
@@ -366,11 +81,11 @@
                         <thead>
                             <tr>
                                 <th>Path</th>
-                                <th style="text-align: right;">Count</th>
+                                <th class="text-right">Count</th>
                             </tr>
                         </thead>
-                        <tbody hx-get="/fragments/top-paths" 
-                               hx-trigger="every 3s" 
+                        <tbody hx-get="/fragments/top-paths"
+                               hx-trigger="every 3s"
                                hx-swap="innerHTML">
                             {% if top_paths %}
                                 {% for item in top_paths %}
@@ -381,23 +96,19 @@
                                             <span>{{ item.path }}</span>
                                         </div>
                                     </td>
-                                    <td class="count-cell" style="text-align: right;">
-                                        {{ "{:,}".format(item.count) }}
-                                    </td>
+                                    <td class="count-cell">{{ "{:,}".format(item.count) }}</td>
                                 </tr>
                                 {% endfor %}
                             {% else %}
                                 <tr>
-                                    <td colspan="2" class="empty-state">
-                                        <div>No data available</div>
-                                    </td>
+                                    <td colspan="2" class="empty-state">No data available</td>
                                 </tr>
                             {% endif %}
                         </tbody>
                     </table>
                 </div>
             </div>
-            
+
             <!-- Status Codes Chart -->
             <div class="panel">
                 <h2 class="section-header">Status Codes</h2>
@@ -405,7 +116,7 @@
                     <canvas id="statusCodesChart"></canvas>
                 </div>
             </div>
-            
+
             <!-- HTTP Methods Chart -->
             <div class="panel">
                 <h2 class="section-header">HTTP Methods</h2>
@@ -413,241 +124,19 @@
                     <canvas id="methodsChart"></canvas>
                 </div>
             </div>
+
         </div>
     </div>
-    
+
+    <!-- Bootstrap server-rendered data for the chart initialisation -->
     <script>
-        // Chart.js default config
-        Chart.defaults.color = '#4ade80';
-        Chart.defaults.borderColor = '#1f3028';
-        Chart.defaults.font.family = "'JetBrains Mono', monospace";
-        
-        // Helper: Get color for status code
-        function getStatusColor(code) {
-            const codeNum = parseInt(code);
-            if (codeNum >= 200 && codeNum < 300) return '#22c55e'; // green
-            if (codeNum >= 300 && codeNum < 400) return '#06b6d4'; // teal
-            if (codeNum >= 400 && codeNum < 500) return '#fbbf24'; // amber
-            if (codeNum >= 500) return '#f87171'; // red
-            return '#4ade80'; // default green
-        }
-        
-        // Helper: Format timestamp to readable time
-        function formatTime(timestamp) {
-            const date = new Date(timestamp * 1000);
-            return date.toLocaleTimeString('en-US', { 
-                hour12: false, 
-                hour: '2-digit', 
-                minute: '2-digit' 
-            });
-        }
-        
-        // History Line Chart
-        const historyCtx = document.getElementById('historyChart').getContext('2d');
-        const historyChart = new Chart(historyCtx, {
-            type: 'line',
-            data: {
-                labels: [],
-                datasets: [{
-                    label: 'Requests/min',
-                    data: [],
-                    borderColor: '#22c55e',
-                    backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                    fill: true,
-                    tension: 0.4,
-                    pointRadius: 3,
-                    pointHoverRadius: 5,
-                    pointBackgroundColor: '#22c55e',
-                    pointBorderColor: '#0a0f0d',
-                    pointBorderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: {
-                    mode: 'index',
-                    intersect: false
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        grid: {
-                            color: '#1f3028'
-                        },
-                        ticks: {
-                            color: '#4ade80'
-                        }
-                    },
-                    x: {
-                        grid: {
-                            color: '#1f3028'
-                        },
-                        ticks: {
-                            color: '#4ade80',
-                            maxRotation: 45,
-                            minRotation: 45
-                        }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        backgroundColor: '#111a15',
-                        titleColor: '#f0fdf4',
-                        bodyColor: '#86efac',
-                        borderColor: '#22c55e',
-                        borderWidth: 1,
-                        padding: 12,
-                        displayColors: false
-                    }
-                }
-            }
-        });
-        
-        // Status Codes Chart
-        const statusCodesCtx = document.getElementById('statusCodesChart').getContext('2d');
-        const statusCodesChart = new Chart(statusCodesCtx, {
-            type: 'doughnut',
-            data: {
-                labels: {{ status_codes.keys()|list|tojson }},
-                datasets: [{
-                    data: {{ status_codes.values()|list|tojson }},
-                    backgroundColor: [],
-                    borderColor: '#0a0f0d',
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            padding: 15,
-                            font: {
-                                size: 11
-                            }
-                        }
-                    }
-                }
-            }
-        });
-        
-        // Set initial colors for status codes
-        const initialStatusCodes = {{ status_codes.keys()|list|tojson }};
-        statusCodesChart.data.datasets[0].backgroundColor = 
-            initialStatusCodes.map(code => getStatusColor(code));
-        statusCodesChart.update('none');
-        
-        // HTTP Methods Chart
-        const methodsCtx = document.getElementById('methodsChart').getContext('2d');
-        const greenShades = ['#22c55e', '#16a34a', '#86efac', '#4ade80', '#10b981'];
-        const methodsChart = new Chart(methodsCtx, {
-            type: 'bar',
-            data: {
-                labels: {{ methods.keys()|list|tojson }},
-                datasets: [{
-                    label: 'Requests',
-                    data: {{ methods.values()|list|tojson }},
-                    backgroundColor: greenShades,
-                    borderColor: '#16a34a',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        grid: {
-                            color: '#1f3028'
-                        },
-                        ticks: {
-                            color: '#4ade80'
-                        }
-                    },
-                    x: {
-                        grid: {
-                            display: false
-                        },
-                        ticks: {
-                            color: '#4ade80'
-                        }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                }
-            }
-        });
-        
-        // Update charts via HTMX polling
-        async function updateCharts() {
-            try {
-                const response = await fetch('/fragments/charts');
-                const data = await response.json();
-                
-                // Update status codes chart
-                if (data.status_codes && Object.keys(data.status_codes).length > 0) {
-                    const statusEntries = Object.entries(data.status_codes);
-                    statusCodesChart.data.labels = statusEntries.map(([code]) => code);
-                    statusCodesChart.data.datasets[0].data = statusEntries.map(([, count]) => count);
-                    statusCodesChart.data.datasets[0].backgroundColor = 
-                        statusEntries.map(([code]) => getStatusColor(code));
-                    statusCodesChart.update('none');
-                }
-                
-                // Update methods chart
-                if (data.methods && Object.keys(data.methods).length > 0) {
-                    const methodEntries = Object.entries(data.methods);
-                    methodsChart.data.labels = methodEntries.map(([method]) => method);
-                    methodsChart.data.datasets[0].data = methodEntries.map(([, count]) => count);
-                    methodsChart.data.datasets[0].backgroundColor = 
-                        methodEntries.map((_, i) => greenShades[i % greenShades.length]);
-                    methodsChart.update('none');
-                }
-                
-                // Update timestamp
-                const now = new Date();
-                document.getElementById('lastUpdated').textContent = 
-                    `Updated: ${now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
-            } catch (error) {
-                console.error('Failed to update charts:', error);
-            }
-        }
-        
-        // Update history line chart
-        async function updateHistory() {
-            try {
-                const response = await fetch('/fragments/history?limit=60');
-                const data = await response.json();
-                
-                if (data.history && data.history.length > 0) {
-                    historyChart.data.labels = data.history.map(point => formatTime(point.timestamp));
-                    historyChart.data.datasets[0].data = data.history.map(point => point.count);
-                    historyChart.update('none');
-                }
-            } catch (error) {
-                console.error('Failed to update history:', error);
-            }
-        }
-        
-        // Poll charts every 3 seconds
-        setInterval(updateCharts, 3000);
-        
-        // Poll history every 3 seconds
-        setInterval(updateHistory, 3000);
-        
-        // Initial chart update
-        updateCharts();
-        updateHistory();
+        window.__chartData = {
+            statusCodeLabels: {{ status_codes.keys()|list|tojson }},
+            statusCodeValues: {{ status_codes.values()|list|tojson }},
+            methodLabels:     {{ methods.keys()|list|tojson }},
+            methodValues:     {{ methods.values()|list|tojson }},
+        };
     </script>
+    <script src="/static/dashboard.js"></script>
 </body>
 </html>

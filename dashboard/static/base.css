@@ -1,0 +1,31 @@
+/* ── Design tokens ──────────────────────────────────────────────────────── */
+:root {
+    --bg-primary:    #0a0f0d;
+    --bg-surface:    #111a15;
+    --bg-elevated:   #162010;
+    --border:        #1f3028;
+    --accent-green:  #22c55e;
+    --accent-dim:    #16a34a;
+    --accent-glow:   rgba(34, 197, 94, 0.15);
+    --text-primary:  #f0fdf4;
+    --text-secondary:#86efac;
+    --text-muted:    #4ade80;
+    --error:         #f87171;
+    --warning:       #fbbf24;
+}
+
+/* ── Reset ──────────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+}
