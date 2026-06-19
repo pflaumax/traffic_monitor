@@ -55,6 +55,38 @@ async def test_update_stats_calls_pipeline_with_six_ops(mock_redis, mock_pipelin
     pipe.execute.assert_awaited_once()
 
 
+async def test_update_stats_sets_ttl_on_all_keys(mock_redis, mock_pipeline, sample_event):
+    """update_stats SHALL set TTL on all six stats keys for rolling window."""
+    pipe, _cm = mock_pipeline
+
+    await update_stats(mock_redis, sample_event)
+
+    # Verify EXPIRE is called for all 6 stats keys with the configured TTL
+    expected_ttl = settings.stats_ttl_seconds
+    pipe.expire.assert_any_call("stats:total_requests", expected_ttl)
+    pipe.expire.assert_any_call("stats:status_codes", expected_ttl)
+    pipe.expire.assert_any_call("stats:methods", expected_ttl)
+    pipe.expire.assert_any_call("stats:response_time_sum", expected_ttl)
+    pipe.expire.assert_any_call("stats:response_time_count", expected_ttl)
+    pipe.expire.assert_any_call("stats:top_paths", expected_ttl)
+    assert pipe.expire.call_count == 6
+
+
+async def test_update_stats_ttl_uses_configured_value(
+    mock_redis, mock_pipeline, sample_event, monkeypatch
+):
+    """TTL SHALL be configurable via settings.stats_ttl_seconds."""
+    pipe, _cm = mock_pipeline
+    custom_ttl = 3600  # 1 hour
+    monkeypatch.setattr(settings, "stats_ttl_seconds", custom_ttl)
+
+    await update_stats(mock_redis, sample_event)
+
+    # All EXPIRE calls should use the custom TTL
+    for call in pipe.expire.call_args_list:
+        assert call[0][1] == custom_ttl
+
+
 async def test_update_stats_propagates_redis_errors(mock_redis, mock_pipeline, sample_event):
     """Redis failures SHALL propagate so the consumer can skip the offset commit."""
     pipe, _cm = mock_pipeline
