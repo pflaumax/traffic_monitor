@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     dead_letter_max_len: int = 1_000
 
     # Redis TTL for stats keys (rolling window)
-    stats_ttl_seconds: int = 86400  # 24h
+    stats_ttl_seconds: int = 60 * 60 * 24  # 24h
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
