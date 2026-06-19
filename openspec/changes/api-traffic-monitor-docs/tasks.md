@@ -80,9 +80,9 @@
 
 ## 10. Stats History Endpoint (for Dashboard Line Chart)
 
-- [ ] 10.1 Add Redis sorted set `stats:history` with `ZADD stats:history {timestamp} {count}` in `proxy/redis_client.py`
-- [ ] 10.2 Implement `GET /stats/history` endpoint in `proxy/main.py` returning last N time-series entries
-- [ ] 10.3 Wire dashboard line chart to `GET /stats/history`
+- [x] 10.1 Add Redis sorted set `stats:history` with `ZADD stats:history {timestamp} {count}` in `proxy/redis_client.py`
+- [x] 10.2 Implement `GET /stats/history` endpoint in `proxy/main.py` returning last N time-series entries
+- [x] 10.3 Wire dashboard line chart to `GET /stats/history`
 
 ## 11. Auth and Observability (TASK-14, TASK-15, TASK-16)
 

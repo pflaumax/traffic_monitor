@@ -23,9 +23,9 @@ def mock_redis():
     redis = AsyncMock()
     redis.aclose = AsyncMock()
     # gather() calls: total, status_codes, methods, time_sum, time_count, top_paths
-    redis.get = AsyncMock(side_effect=[b"10", b"500.0", b"10"])
-    redis.hgetall = AsyncMock(side_effect=[{b"200": b"10"}, {b"GET": b"10"}])
-    redis.zrevrange = AsyncMock(return_value=[(b"/get", 10.0)])
+    redis.get = AsyncMock(side_effect=["10", "500.0", "10"])
+    redis.hgetall = AsyncMock(side_effect=[{"200": "10"}, {"GET": "10"}])
+    redis.zrevrange = AsyncMock(return_value=[("/get", 10.0)])
     redis.incr = AsyncMock(return_value=1)
     redis.expire = AsyncMock(return_value=True)
     pipeline_cm = MagicMock()
@@ -119,3 +119,41 @@ async def test_proxy_query_params(client):
 async def test_proxy_not_found(client):
     resp = await client.get("/proxy/status/404")
     assert resp.status_code == 404
+
+
+async def test_stats_history_empty(client, mock_redis):
+    """GET /stats/history SHALL return an empty list when Redis has no history data."""
+    mock_redis.zrevrange.return_value = []
+
+    resp = await client.get("/stats/history")
+    assert resp.status_code == 200
+    assert resp.json() == {"history": []}
+
+
+async def test_stats_history_respects_limit(client, mock_redis):
+    """GET /stats/history?limit=N SHALL call Redis with the correct range and return
+    entries in chronological (ascending) order."""
+    # zrevrange returns newest-first; simulate 5 minute buckets
+    fake_entries = [(str(1700000000 + i * 60), float(i + 1)) for i in range(4, -1, -1)]
+    mock_redis.zrevrange.return_value = fake_entries
+
+    resp = await client.get("/stats/history?limit=5")
+    assert resp.status_code == 200
+    data = resp.json()
+
+    # Redis was called with the correct key and limit bounds
+    mock_redis.zrevrange.assert_called_once_with("stats:history", 0, 4, withscores=True)
+
+    # Response must be chronological (ascending timestamp)
+    assert len(data["history"]) == 5
+    timestamps = [p["timestamp"] for p in data["history"]]
+    assert timestamps == sorted(timestamps)
+
+
+async def test_stats_history_redis_unavailable(client, mock_redis):
+    """GET /stats/history SHALL return HTTP 503 when Redis is unreachable."""
+    mock_redis.zrevrange.side_effect = Exception("Redis connection refused")
+
+    resp = await client.get("/stats/history")
+    assert resp.status_code == 503
+    assert "unavailable" in resp.json()["detail"].lower()

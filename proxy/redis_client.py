@@ -8,8 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 async def start_redis(app) -> None:
-    # decode_responses=False — bytes decoded explicitly in main.py
-    app.state.redis = aioredis.from_url(settings.redis_url, decode_responses=False)
+    app.state.redis = aioredis.from_url(settings.redis_url, decode_responses=True)
     logger.info("Redis client started")
 
 
