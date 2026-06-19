@@ -18,6 +18,8 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    env:
+      JWT_SECRET_KEY: "ci-test-secret-key-not-used-in-production-padding"
     steps:
       - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v7
